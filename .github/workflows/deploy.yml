@@ -1,0 +1,48 @@
+name: Deploy API
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify server starts
+        run: |
+          timeout 8 node src/index.js &
+          sleep 4
+          curl -f http://localhost:3001/health || (echo "Health check failed" && exit 1)
+          echo "Server healthy"
+
+  # ── Railway deployment (uncomment and add RAILWAY_TOKEN secret to use) ──────
+  # deploy-railway:
+  #   needs: test
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Deploy to Railway
+  #       uses: bervProject/railway-deploy@main
+  #       with:
+  #         railway_token: ${{ secrets.RAILWAY_TOKEN }}
+  #         service: vkyc-api
+
+  # ── Render deployment (uncomment and add RENDER_DEPLOY_HOOK secret to use) ──
+  # deploy-render:
+  #   needs: test
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Trigger Render deploy
+  #       run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
