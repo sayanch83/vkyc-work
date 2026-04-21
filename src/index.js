@@ -52,6 +52,25 @@ app.use('/api/v1/agent',     agentRoutes);
 app.use('/api/v1/applicant', applicantRoutes);
 app.use('/api/v1/auditor',   auditorRoutes);
 
+// ── Signal store — cross-device applicant→agent notification ─────────────────
+let _signal = null;
+app.post('/api/v1/signal', (req, res) => {
+  _signal = { ...req.body, receivedAt: Date.now() };
+  console.log('[Signal] Received:', _signal);
+  res.json({ success: true });
+});
+app.get('/api/v1/signal', (_req, res) => {
+  if (_signal && Date.now() - _signal.receivedAt < 30000) {
+    res.json(_signal);
+  } else {
+    res.json({ type: 'none' });
+  }
+});
+app.delete('/api/v1/signal', (_req, res) => {
+  _signal = null;
+  res.json({ success: true });
+});
+
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {
   res.status(404).json({ success: false, error: 'Not found' });
