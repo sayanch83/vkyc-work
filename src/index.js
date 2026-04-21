@@ -56,20 +56,22 @@ app.use('/api/v1/auditor',   auditorRoutes);
 let _signal = null;
 let _agentSignal = null;  // agent→applicant commands
 
-// Agent → Applicant signal
+// Agent → Applicant commands queue
+let _agentCmdQueue = []; // queue of commands
 app.post('/api/v1/agent-signal', (req, res) => {
-  _agentSignal = { ...req.body, receivedAt: Date.now() };
+  _agentCmdQueue.push({ ...req.body, id: Date.now() + Math.random(), receivedAt: Date.now() });
+  // Keep only last 20 commands
+  if (_agentCmdQueue.length > 20) _agentCmdQueue = _agentCmdQueue.slice(-20);
   res.json({ success: true });
 });
-app.get('/api/v1/agent-signal', (_req, res) => {
-  if (_agentSignal && Date.now() - _agentSignal.receivedAt < 10000) {
-    res.json(_agentSignal);
-  } else {
-    res.json({ type: 'none' });
-  }
+// Applicant polls with ?after=<lastId> to get only new commands
+app.get('/api/v1/agent-signal', (req, res) => {
+  const after = parseFloat(req.query.after || '0');
+  const newCmds = _agentCmdQueue.filter(c => c.id > after && Date.now() - c.receivedAt < 60000);
+  res.json({ commands: newCmds });
 });
 app.delete('/api/v1/agent-signal', (_req, res) => {
-  _agentSignal = null;
+  _agentCmdQueue = [];
   res.json({ success: true });
 });
 app.post('/api/v1/signal', (req, res) => {
