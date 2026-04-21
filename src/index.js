@@ -54,6 +54,24 @@ app.use('/api/v1/auditor',   auditorRoutes);
 
 // ── Signal store — cross-device applicant→agent notification ─────────────────
 let _signal = null;
+let _agentSignal = null;  // agent→applicant commands
+
+// Agent → Applicant signal
+app.post('/api/v1/agent-signal', (req, res) => {
+  _agentSignal = { ...req.body, receivedAt: Date.now() };
+  res.json({ success: true });
+});
+app.get('/api/v1/agent-signal', (_req, res) => {
+  if (_agentSignal && Date.now() - _agentSignal.receivedAt < 10000) {
+    res.json(_agentSignal);
+  } else {
+    res.json({ type: 'none' });
+  }
+});
+app.delete('/api/v1/agent-signal', (_req, res) => {
+  _agentSignal = null;
+  res.json({ success: true });
+});
 app.post('/api/v1/signal', (req, res) => {
   _signal = { ...req.body, receivedAt: Date.now() };
   console.log('[Signal] Received:', _signal);
