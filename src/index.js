@@ -91,6 +91,36 @@ app.delete('/api/v1/signal', (_req, res) => {
   res.json({ success: true });
 });
 
+// ── Recording store — temporary in-memory (for demo) ────────────────────────
+// Stores base64 WebM recording from agent after session ends
+let _recording = null;
+
+app.post('/api/v1/recording', (req, res) => {
+  const { sessionId, caseId, agentId, data, mimeType, duration } = req.body;
+  if (!data) return res.status(400).json({ success: false, error: 'No recording data' });
+  _recording = {
+    sessionId: sessionId || ('SES-' + Date.now()),
+    caseId: caseId || 'KYC-DEMO-001',
+    agentId: agentId || 'AGT001',
+    data,        // base64 encoded video
+    mimeType: mimeType || 'video/webm',
+    duration,
+    recordedAt: new Date().toISOString()
+  };
+  console.log('[Recording] Stored session:', _recording.sessionId, 'size:', Math.round(data.length/1024)+'KB');
+  res.json({ success: true, sessionId: _recording.sessionId });
+});
+
+app.get('/api/v1/recording', (_req, res) => {
+  if (!_recording) return res.json({ success: false, error: 'No recording available' });
+  res.json({ success: true, recording: _recording });
+});
+
+app.delete('/api/v1/recording', (_req, res) => {
+  _recording = null;
+  res.json({ success: true });
+});
+
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {
   res.status(404).json({ success: false, error: 'Not found' });
