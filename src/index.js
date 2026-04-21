@@ -13,13 +13,11 @@ const PORT = process.env.PORT || 3001;
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['http://localhost:3333', 'http://localhost:3000', 'https://sayanch83.github.io'],
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // ── Request logger ────────────────────────────────────────────────────────────
