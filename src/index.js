@@ -168,6 +168,24 @@ app.post('/api/v1/demo-config/reset', (_req, res) => {
   res.json({ success: true });
 });
 
+// ── Session result — agent posts decision after session ──────────────────────
+let _sessionResult = null;
+
+app.post('/api/v1/session-result', (req, res) => {
+  _sessionResult = { ...req.body, decidedAt: new Date().toISOString() };
+  console.log('[Session] Result stored:', _sessionResult.decision, _sessionResult.applicantName);
+  res.json({ success: true });
+});
+
+app.get('/api/v1/session-result', (_req, res) => {
+  res.json({ success: true, result: _sessionResult });
+});
+
+app.delete('/api/v1/session-result', (_req, res) => {
+  _sessionResult = null;
+  res.json({ success: true });
+});
+
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {
   res.status(404).json({ success: false, error: 'Not found' });
