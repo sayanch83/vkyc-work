@@ -119,6 +119,55 @@ app.delete('/api/v1/recording', (_req, res) => {
   res.json({ success: true });
 });
 
+// ── Demo config — editable applicant/case data for sales demos ───────────────
+let _demoConfig = {
+  applicant: {
+    name: 'Harshit Sodagar',
+    mobile: '98765 43210',
+    appId: 'CDL2847391',
+    product: 'Personal Loan',
+    amount: 300000,
+    pan: 'AWEPD1123P',
+    dob: '02/08/1979',
+    father: 'Suresh Kumar',
+    address: 'B-204, Andheri West, Mumbai 400058',
+    aadhaarOffset: -1,  // days from today (-1=yesterday, -365=1yr ago)
+  },
+  queue: [
+    { name:'Priya Mehta',     product:'Home Loan',     amount:5000000, status:'completed', waitMins:0  },
+    { name:'Rahul Verma',     product:'Car Loan',      amount:800000,  status:'in-session', waitMins:0  },
+    { name:'Anita Sharma',    product:'Personal Loan', amount:200000,  status:'in-queue',   waitMins:8  },
+  ]
+};
+
+app.get('/api/v1/demo-config', (_req, res) => {
+  res.json({ success: true, config: _demoConfig });
+});
+
+app.post('/api/v1/demo-config', (req, res) => {
+  if (req.body.applicant) _demoConfig.applicant = { ..._demoConfig.applicant, ...req.body.applicant };
+  if (req.body.queue)     _demoConfig.queue     = req.body.queue;
+  console.log('[Config] Updated demo config:', _demoConfig.applicant.name);
+  res.json({ success: true, config: _demoConfig });
+});
+
+app.post('/api/v1/demo-config/reset', (_req, res) => {
+  _demoConfig = {
+    applicant: {
+      name: 'Harshit Sodagar', mobile: '98765 43210', appId: 'CDL2847391',
+      product: 'Personal Loan', amount: 300000, pan: 'AWEPD1123P',
+      dob: '02/08/1979', father: 'Suresh Kumar',
+      address: 'B-204, Andheri West, Mumbai 400058', aadhaarOffset: -1,
+    },
+    queue: [
+      { name:'Priya Mehta',  product:'Home Loan',     amount:5000000, status:'completed',  waitMins:0 },
+      { name:'Rahul Verma',  product:'Car Loan',      amount:800000,  status:'in-session', waitMins:0 },
+      { name:'Anita Sharma', product:'Personal Loan', amount:200000,  status:'in-queue',   waitMins:8 },
+    ]
+  };
+  res.json({ success: true });
+});
+
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {
   res.status(404).json({ success: false, error: 'Not found' });
