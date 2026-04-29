@@ -3,6 +3,46 @@ const express = require('express');
 const router  = express.Router();
 const { MOCK_CASES, sessions, uuid } = require('../mock/data');
 
+// ── POST /agent/queue/add — Re-KYC injects a customer into the VKYC queue ─────
+router.post('/queue/add', (req, res) => {
+  const { id, name, mobile, appId, product, pan, dob, father, address, scheduledSlot, status } = req.body;
+  if (!id || !name) return res.status(400).json({ success: false, error: 'id and name required' });
+
+  // Check if already in queue
+  const existing = MOCK_CASES.find(x => x.id === id || x.appId === appId);
+  if (existing) {
+    // Update scheduled slot if exists
+    if (scheduledSlot) existing.scheduledSlot = scheduledSlot;
+    return res.json({ success: true, case: existing, message: 'Updated existing case' });
+  }
+
+  // Add new case to the queue
+  const queuePos = MOCK_CASES.filter(c => c.status === 'in-queue' || c.status === 'scheduled').length + 1;
+  const waitMins = queuePos * 4;
+  const newCase = {
+    id,
+    name,
+    mobile: mobile || '',
+    appId: appId || id,
+    product: product || 'Banking Account',
+    amount: 0,
+    pan: pan || '',
+    dob: dob || '',
+    father: father || '',
+    address: address || '',
+    aadhaarDate: new Date().toISOString().slice(0, 10),
+    status: status || 'scheduled',
+    scheduledSlot: scheduledSlot || null,
+    queuePos,
+    waitMins,
+    geo: null,
+    preCheckLiveness: null,
+  };
+  MOCK_CASES.push(newCase);
+  console.log(`[Queue] Added ${name} (${id}) — slot: ${scheduledSlot || 'walk-in'}, pos: ${queuePos}`);
+  res.json({ success: true, case: newCase });
+});
+
 // ── GET /agent/cases — dashboard case list ─────────────────────────────────
 router.get('/cases', (req, res) => {
   res.json({ success: true, cases: MOCK_CASES });
@@ -99,23 +139,6 @@ router.post('/sessions/:sid/decision', (req, res) => {
   const referenceId = 'VKP-' + Math.random().toString(36).substr(2, 8).toUpperCase();
   session.referenceId = referenceId;
   session.events.push({ type: 'decision', decision, remarks, decidedAt: session.decidedAt });
-
-  // ── Notify Re-KYC that VKYC session is now pending auditor review ─────────
-  const rekycApiUrl = process.env.REKYC_API_URL || 'https://rekyc-work-production.up.railway.app';
-  const custId = c ? (c.custId || c.appId || c.id) : null;
-  if (custId) {
-    fetch(`${rekycApiUrl}/api/vkyc/callback`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        custId,
-        decision: 'pending_audit',
-        sessionId: referenceId,
-        decidedBy: session.officerName || 'Agent',
-      }),
-    }).catch(e => console.warn('[Agent] Re-KYC notify failed:', e.message));
-  }
-
   res.json({ success: true, referenceId, session });
 });
 
