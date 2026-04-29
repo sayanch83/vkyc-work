@@ -31,6 +31,28 @@ router.post('/cases/:id/decision', (req, res) => {
   c.status  = decision === 'approve' ? 'completed' : 'rejected';
   c.remarks = remarks || '';
   c.decidedAt = new Date().toISOString();
+
+  // ── Notify Re-KYC system ──────────────────────────────────────────────────
+  const rekycApiUrl = process.env.REKYC_API_URL || 'https://rekyc-work-production.up.railway.app';
+  const custId = c.custId || c.appId || c.id;
+  if (custId) {
+    fetch(`${rekycApiUrl}/api/vkyc/callback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        custId,
+        decision,
+        remarks: remarks || '',
+        sessionId: c.sessionId,
+        decidedBy: 'Auditor',
+      }),
+    }).then(() => {
+      console.log(`[Auditor] Notified Re-KYC for ${custId}: ${decision}`);
+    }).catch(e => {
+      console.warn('[Auditor] Re-KYC notification failed:', e.message);
+    });
+  }
+
   res.json({ success: true, case: c });
 });
 

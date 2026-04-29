@@ -99,6 +99,23 @@ router.post('/sessions/:sid/decision', (req, res) => {
   const referenceId = 'VKP-' + Math.random().toString(36).substr(2, 8).toUpperCase();
   session.referenceId = referenceId;
   session.events.push({ type: 'decision', decision, remarks, decidedAt: session.decidedAt });
+
+  // ── Notify Re-KYC that VKYC session is now pending auditor review ─────────
+  const rekycApiUrl = process.env.REKYC_API_URL || 'https://rekyc-work-production.up.railway.app';
+  const custId = c ? (c.custId || c.appId || c.id) : null;
+  if (custId) {
+    fetch(`${rekycApiUrl}/api/vkyc/callback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        custId,
+        decision: 'pending_audit',
+        sessionId: referenceId,
+        decidedBy: session.officerName || 'Agent',
+      }),
+    }).catch(e => console.warn('[Agent] Re-KYC notify failed:', e.message));
+  }
+
   res.json({ success: true, referenceId, session });
 });
 
