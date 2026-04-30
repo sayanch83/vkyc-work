@@ -143,3 +143,32 @@ router.post('/sessions/:sid/decision', (req, res) => {
 });
 
 module.exports = router;
+
+// ── Startup: load scheduled cases from Re-KYC API into queue ─────────────────
+async function loadScheduledCasesFromRekyc() {
+  const rekycApiUrl = process.env.REKYC_API_URL || 'https://rekyc-work-production.up.railway.app';
+  try {
+    const res = await fetch(`${rekycApiUrl}/api/vkyc/scheduled-cases`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.cases) return;
+    for (const c of data.cases) {
+      const existing = MOCK_CASES.find(x => x.id === c.id || x.appId === c.id);
+      if (!existing) {
+        MOCK_CASES.push({
+          id: c.id, name: c.name, mobile: c.mobile, appId: c.id,
+          product: c.relationship || 'Banking Account', amount: 0,
+          pan: c.pan || '', dob: c.dob || '', father: '', address: c.address || '',
+          aadhaarDate: new Date().toISOString().slice(0,10),
+          status: 'scheduled', scheduledSlot: c.vkycScheduled,
+          queuePos: MOCK_CASES.length + 1, waitMins: (MOCK_CASES.length + 1) * 4,
+          geo: null, preCheckLiveness: null,
+        });
+        console.log(`[Queue] Loaded scheduled case from Re-KYC: ${c.name} — ${c.vkycScheduled}`);
+      }
+    }
+  } catch(e) {
+    console.warn('[Queue] Failed to load scheduled cases from Re-KYC:', e.message);
+  }
+}
+loadScheduledCasesFromRekyc();
