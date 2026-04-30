@@ -186,6 +186,24 @@ app.delete('/api/v1/session-result', (_req, res) => {
   res.json({ success: true });
 });
 
+// ── Audit result — auditor posts final decision ───────────────────────────────
+let _auditResult = null;
+
+app.post('/api/v1/audit-result', (req, res) => {
+  _auditResult = { ...req.body, auditedAt: new Date().toISOString() };
+  console.log('[Audit] Result stored:', _auditResult.decision, _auditResult.caseId);
+  res.json({ success: true });
+});
+
+app.get('/api/v1/audit-result', (_req, res) => {
+  res.json({ success: true, result: _auditResult });
+});
+
+app.delete('/api/v1/audit-result', (_req, res) => {
+  _auditResult = null;
+  res.json({ success: true });
+});
+
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {
   res.status(404).json({ success: false, error: 'Not found' });
